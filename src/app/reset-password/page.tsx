@@ -1,10 +1,11 @@
 'use client';
-import { useState, useEffect } from 'react';
+
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import axios from 'axios';
 import Link from 'next/link';
 
-export default function ResetPasswordPage() {
+function ResetPasswordForm() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
@@ -21,7 +22,6 @@ export default function ResetPasswordPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-
     if (password!== confirmPassword) {
       setError('Passwords do not match');
       return;
@@ -30,7 +30,6 @@ export default function ResetPasswordPage() {
       setError('Password must be at least 6 characters');
       return;
     }
-
     setLoading(true);
     try {
       await axios.post('/api/reset-password', { token, password });
@@ -49,19 +48,16 @@ export default function ResetPasswordPage() {
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Reset Password</h1>
           <p className="text-gray-600">Enter your new password</p>
         </div>
-
         {success && (
           <div className="mb-6 p-4 bg-green-50 border border-green-200 text-green-700 rounded-lg text-sm animate-in fade-in slide-in-from-top-2 duration-300">
             {success}
           </div>
         )}
-
         {error && (
           <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm animate-in fade-in slide-in-from-top-2 duration-300">
             {error}
           </div>
         )}
-
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">New Password</label>
@@ -95,7 +91,6 @@ export default function ResetPasswordPage() {
             {loading? 'Resetting...' : 'Reset Password'}
           </button>
         </form>
-
         <p className="text-center text-sm text-gray-600 mt-6">
           <Link href="/login" className="text-blue-600 hover:text-blue-700 font-semibold transition-colors duration-200">
             Back to login
@@ -103,5 +98,13 @@ export default function ResetPasswordPage() {
         </p>
       </div>
     </main>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
+      <ResetPasswordForm />
+    </Suspense>
   );
 }
