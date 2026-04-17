@@ -1,4 +1,8 @@
 'use client';
+
+// Eto yung fix para sa build error
+export const dynamic = 'force-dynamic';
+
 import { signIn } from 'next-auth/react';
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -18,7 +22,6 @@ export default function LoginPage() {
       setSuccess('Account created! You can now sign in.');
       setTimeout(() => setSuccess(''), 4000);
     }
-
     if (searchParams.get('deleted') === 'true') {
       setSuccess('Account deleted successfully.');
       setTimeout(() => setSuccess(''), 4000);
@@ -30,13 +33,11 @@ export default function LoginPage() {
     setLoading(true);
     setError('');
     setSuccess('');
-
     const res = await signIn('credentials', {
       email,
       password,
       redirect: false,
     });
-
     if (res?.error) {
       setError('Invalid email or password');
       setLoading(false);
@@ -52,19 +53,16 @@ export default function LoginPage() {
           <h1 className="text-3xl font-bold text-gray-900 mb-2">OJT DTR System</h1>
           <p className="text-gray-600">Sign in to track your hours</p>
         </div>
-
         {success && (
           <div className="mb-6 p-4 bg-green-50 border border-green-200 text-green-700 rounded-lg text-sm animate-in fade-in slide-in-from-top-2 duration-300">
             {success}
           </div>
         )}
-
         {error && (
           <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm animate-in fade-in slide-in-from-top-2 duration-300">
             {error}
           </div>
         )}
-
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">Email</label>
@@ -104,7 +102,6 @@ export default function LoginPage() {
             {loading? 'Signing in...' : 'Sign In'}
           </button>
         </form>
-
         <p className="text-center text-sm text-gray-600 mt-6">
           Don't have an account?{' '}
           <Link
