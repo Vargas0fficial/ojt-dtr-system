@@ -1,7 +1,9 @@
 'use client';
+
 import { signIn } from 'next-auth/react';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -14,13 +16,11 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     setError('');
-    
     const res = await signIn('credentials', {
       email,
       password,
       redirect: false,
     });
-
     if (res?.error) {
       setError('Invalid email or password');
       setLoading(false);
@@ -36,13 +36,11 @@ export default function LoginPage() {
           <h1 className="text-3xl font-bold text-gray-900 mb-2">OJT DTR System</h1>
           <p className="text-gray-600">Sign in to track your hours</p>
         </div>
-
         {error && (
           <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm animate-in fade-in slide-in-from-top-2 duration-300">
             {error}
           </div>
         )}
-
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">Email</label>
@@ -74,6 +72,15 @@ export default function LoginPage() {
             {loading? 'Signing in...' : 'Sign In'}
           </button>
         </form>
+        <p className="text-center text-sm text-gray-600 mt-6">
+          Don't have an account?{' '}
+          <Link
+            href="/register"
+            className="text-blue-600 hover:text-blue-700 font-semibold transition-colors duration-200"
+          >
+            Register here
+          </Link>
+        </p>
       </div>
     </main>
   );
