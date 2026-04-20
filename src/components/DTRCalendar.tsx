@@ -19,6 +19,14 @@ type Props = {
 export default function DTRCalendar({ dtrData, onDateClick }: Props) {
   const [date, setDate] = useState(new Date());
 
+  // Helper para sa local date YYYY-MM-DD - walang timezone bug
+  const formatLocalDate = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const dtrMap = dtrData.reduce((acc, record) => {
     acc[record.date] = record;
     return acc;
@@ -27,7 +35,8 @@ export default function DTRCalendar({ dtrData, onDateClick }: Props) {
   const tileClassName = ({ date, view }: { date: Date, view: string }) => {
     if (view!== 'month') return '';
 
-    const dateStr = date.toISOString().split('T')[0];
+    // FIXED: hindi na toISOString()
+    const dateStr = formatLocalDate(date);
     const record = dtrMap[dateStr];
     const isWeekend = date.getDay() === 0 || date.getDay() === 6;
 
@@ -35,21 +44,19 @@ export default function DTRCalendar({ dtrData, onDateClick }: Props) {
     if (!record) return 'hover:bg-blue-50 transition-colors';
 
     switch (record.status) {
-      case 'present':
-        return 'bg-gradient-to-br from-green-400 to-green-500 text-white font-bold hover:from-green-500 hover:to-green-600 shadow-sm hover:shadow-md transition-all';
-      case 'late':
-        return 'bg-gradient-to-br from-amber-400 to-orange-500 text-white font-bold hover:from-amber-500 hover:to-orange-600 shadow-sm hover:shadow-md transition-all';
-      case 'absent':
-        return 'bg-gradient-to-br from-red-400 to-red-500 text-white font-bold hover:from-red-500 hover:to-red-600 shadow-sm hover:shadow-md transition-all';
-      case 'holiday':
-        return 'bg-gradient-to-br from-blue-400 to-indigo-500 text-white font-bold hover:from-blue-500 hover:to-indigo-600 shadow-sm hover:shadow-md transition-all';
+      case 'present': return 'bg-gradient-to-br from-green-400 to-green-500 text-white font-bold hover:from-green-500 hover:to-green-600 shadow-sm hover:shadow-md transition-all';
+      case 'late': return 'bg-gradient-to-br from-amber-400 to-orange-500 text-white font-bold hover:from-amber-500 hover:to-orange-600 shadow-sm hover:shadow-md transition-all';
+      case 'absent': return 'bg-gradient-to-br from-red-400 to-red-500 text-white font-bold hover:from-red-500 hover:to-red-600 shadow-sm hover:shadow-md transition-all';
+      case 'holiday': return 'bg-gradient-to-br from-blue-400 to-indigo-500 text-white font-bold hover:from-blue-500 hover:to-indigo-600 shadow-sm hover:shadow-md transition-all';
       default: return '';
     }
   };
 
   const tileContent = ({ date, view }: { date: Date, view: string }) => {
     if (view!== 'month') return null;
-    const dateStr = date.toISOString().split('T')[0];
+
+    // FIXED: hindi na toISOString()
+    const dateStr = formatLocalDate(date);
     const record = dtrMap[dateStr];
 
     if (!record) return null;
@@ -87,66 +94,66 @@ export default function DTRCalendar({ dtrData, onDateClick }: Props) {
       </div>
 
       <style jsx global>{`
-       .react-calendar {
-          width: 100%;
-          border: none;
-          font-family: inherit;
-        }
-       .react-calendar__navigation {
-          margin-bottom: 1rem;
-        }
-       .react-calendar__navigation button {
-          min-width: 44px;
-          background: none;
-          font-size: 1rem;
-          font-weight: 600;
-          color: #111827;
-          border-radius: 0.5rem;
-          transition: all 0.2s;
-        }
-       .react-calendar__navigation button:hover {
-          background-color: #f3f4f6;
-        }
-       .react-calendar__navigation button:disabled {
-          background-color: transparent;
-          color: #d1d5db;
-        }
-       .react-calendar__month-view__weekdays {
-          text-transform: uppercase;
-          font-weight: 700;
-          font-size: 0.75rem;
-          color: #6b7280;
-        }
-       .react-calendar__month-view__weekdays__weekday {
-          padding: 0.75rem 0;
-        }
-       .react-calendar__month-view__weekdays__weekday abbr {
-          text-decoration: none;
-        }
-       .react-calendar__tile {
-          padding: 0.75rem 0.25rem;
-          background: none;
-          border-radius: 0.5rem;
-          font-size: 0.875rem;
-          font-weight: 500;
-          transition: all 0.2s;
-          position: relative;
-        }
-       .react-calendar__tile:enabled:hover {
-          background-color: #eff6ff;
-        }
-       .react-calendar__tile--now {
-          background: #dbeafe!important;
-          font-weight: 700;
-          color: #1e40af;
-        }
-       .react-calendar__tile--active {
-          background: #3b82f6!important;
-          color: white!important;
-        }
-       .react-calendar__month-view__days__day--neighboringMonth {
-          color: #d1d5db;
-        }
+      .react-calendar {
+         width: 100%;
+         border: none;
+         font-family: inherit;
+       }
+      .react-calendar__navigation {
+         margin-bottom: 1rem;
+       }
+      .react-calendar__navigation button {
+         min-width: 44px;
+         background: none;
+         font-size: 1rem;
+         font-weight: 600;
+         color: #111827;
+         border-radius: 0.5rem;
+         transition: all 0.2s;
+       }
+      .react-calendar__navigation button:hover {
+         background-color: #f3f4f6;
+       }
+      .react-calendar__navigation button:disabled {
+         background-color: transparent;
+         color: #d1d5db;
+       }
+      .react-calendar__month-view__weekdays {
+         text-transform: uppercase;
+         font-weight: 700;
+         font-size: 0.75rem;
+         color: #6b7280;
+       }
+      .react-calendar__month-view__weekdays__weekday {
+         padding: 0.75rem 0;
+       }
+      .react-calendar__month-view__weekdays__weekday abbr {
+         text-decoration: none;
+       }
+      .react-calendar__tile {
+         padding: 0.75rem 0.25rem;
+         background: none;
+         border-radius: 0.5rem;
+         font-size: 0.875rem;
+         font-weight: 500;
+         transition: all 0.2s;
+         position: relative;
+       }
+      .react-calendar__tile:enabled:hover {
+         background-color: #eff6ff;
+       }
+      .react-calendar__tile--now {
+         background: #dbeafe!important;
+         font-weight: 700;
+         color: #1e40af;
+       }
+      .react-calendar__tile--active {
+         background: #3b82f6!important;
+         color: white!important;
+       }
+      .react-calendar__month-view__days__day--neighboringMonth {
+         color: #d1d5db;
+       }
       `}</style>
 
       <Calendar

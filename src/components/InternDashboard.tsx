@@ -13,6 +13,15 @@ export default function InternDashboard({ user }: any) {
   const [deletingId, setDeletingId] = useState('');
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
+  // Helper para sa local date YYYY-MM-DD - walang timezone bug
+  const formatLocalDate = (date: Date | string) => {
+    const d = new Date(date);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const fetchLogs = async () => {
     try {
       const res = await axios.get('/api/logs');
@@ -23,9 +32,9 @@ export default function InternDashboard({ user }: any) {
       const openLog = res.data.logs.find((log: any) => {
         const logDate = new Date(log.date);
         logDate.setHours(0, 0, 0, 0);
-        return logDate.getTime() === today.getTime() &&!log.timeOut;
+        return logDate.getTime() === today.getTime() && !log.timeOut;
       });
-      setStatus(openLog? 'in' : 'out');
+      setStatus(openLog ? 'in' : 'out');
     } catch (e) {
       console.log('Failed to fetch logs', e);
     }
@@ -77,26 +86,21 @@ export default function InternDashboard({ user }: any) {
     setDeletingId('');
   };
 
-  // Convert logs to calendar format
-const calendarData = logs.map((log: any) => ({
-  date: new Date(log.date).toISOString().split('T')[0],
-  status: log.status === 'rejected'
-   ? 'absent' as const
-    : log.isLate
-   ? 'late' as const
-    : 'present' as const,
-  timeIn: log.timeIn,
-  timeOut: log.timeOut,
-  hours: log.hours,
-}));
+  // Convert logs to calendar format - FIXED
+  const calendarData = logs.map((log: any) => ({
+    date: formatLocalDate(log.date),
+    status: log.status === 'rejected' ? 'absent' as const : log.isLate ? 'late' as const : 'present' as const,
+    timeIn: log.timeIn,
+    timeOut: log.timeOut,
+    hours: log.hours,
+  }));
 
-  const selectedLog = selectedDate
-   ? logs.find((log: any) => {
-        const logDate = new Date(log.date).toISOString().split('T')[0];
-        const selected = selectedDate.toISOString().split('T')[0];
-        return logDate === selected;
-      })
-    : null;
+  // FIXED - walang toISOString na
+  const selectedLog = selectedDate ? logs.find((log: any) => {
+    const logDate = formatLocalDate(log.date);
+    const selected = formatLocalDate(selectedDate);
+    return logDate === selected;
+  }) : null;
 
   const completion = (totalHours / user.requiredHours) * 100;
 
@@ -140,15 +144,15 @@ const calendarData = logs.map((log: any) => ({
           <div className="flex items-center gap-3 mt-2">
             <div
               className={`w-3 h-3 rounded-full animate-pulse ${
-                status === 'in'? 'bg-green-500' : 'bg-gray-400'
+                status === 'in' ? 'bg-green-500' : 'bg-gray-400'
               }`}
             />
             <p className="text-3xl font-bold text-gray-900">
-              {status === 'in'? 'Timed In' : 'Timed Out'}
+              {status === 'in' ? 'Timed In' : 'Timed Out'}
             </p>
           </div>
           <p className="text-sm text-gray-500 mt-2">
-            {status === 'in'? 'You are currently clocked in' : 'Clock in to start tracking'}
+            {status === 'in' ? 'You are currently clocked in' : 'Clock in to start tracking'}
           </p>
         </div>
       </div>
@@ -160,14 +164,14 @@ const calendarData = logs.map((log: any) => ({
             disabled={status === 'in' || loading}
             className="flex-1 bg-green-600 hover:bg-green-700 text-white px-6 py-4 rounded-lg font-semibold transition-all duration-200 shadow-sm hover:shadow-md disabled:bg-gray-300 disabled:cursor-not-allowed active:scale-95 disabled:active:scale-100"
           >
-            {loading && status === 'out'? 'Processing...' : 'Time In'}
+            {loading && status === 'out' ? 'Processing...' : 'Time In'}
           </button>
           <button
             onClick={handleTimeOut}
             disabled={status === 'out' || loading}
             className="flex-1 bg-orange-600 hover:bg-orange-700 text-white px-6 py-4 rounded-lg font-semibold transition-all duration-200 shadow-sm hover:shadow-md disabled:bg-gray-300 disabled:cursor-not-allowed active:scale-95 disabled:active:scale-100"
           >
-            {loading && status === 'in'? 'Processing...' : 'Time Out'}
+            {loading && status === 'in' ? 'Processing...' : 'Time Out'}
           </button>
         </div>
       </div>
@@ -193,9 +197,7 @@ const calendarData = logs.map((log: any) => ({
             <div>
               <p className="text-blue-600">Time Out</p>
               <p className="font-semibold text-blue-900">
-                {selectedLog.timeOut
-                 ? new Date(selectedLog.timeOut).toLocaleTimeString()
-                  : 'Still In'}
+                {selectedLog.timeOut ? new Date(selectedLog.timeOut).toLocaleTimeString() : 'Still In'}
               </p>
             </div>
             <div>
@@ -233,9 +235,9 @@ const calendarData = logs.map((log: any) => ({
                   key={log._id}
                   className={`transition-colors duration-200 ${
                     log.status === 'approved'
-                     ? 'bg-green-50/50'
+                      ? 'bg-green-50/50'
                       : log.status === 'rejected'
-                     ? 'bg-red-50/50'
+                      ? 'bg-red-50/50'
                       : 'hover:bg-gray-50'
                   }`}
                 >
@@ -246,7 +248,7 @@ const calendarData = logs.map((log: any) => ({
                     {new Date(log.timeIn).toLocaleTimeString()}
                   </td>
                   <td className="px-4 py-3 text-gray-900">
-                    {log.timeOut? new Date(log.timeOut).toLocaleTimeString() : '-'}
+                    {log.timeOut ? new Date(log.timeOut).toLocaleTimeString() : '-'}
                   </td>
                   <td className="px-4 py-3 font-medium text-gray-900">
                     {log.hours?.toFixed(2) || '-'}
@@ -254,21 +256,19 @@ const calendarData = logs.map((log: any) => ({
                   <td className="px-4 py-3">
                     <span
                       className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        log.isLate
-                         ? 'bg-orange-100 text-orange-700'
-                          : 'bg-green-100 text-green-700'
+                        log.isLate ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'
                       }`}
                     >
-                      {log.isLate? 'Late' : 'On Time'}
+                      {log.isLate ? 'Late' : 'On Time'}
                     </span>
                   </td>
                   <td className="px-4 py-3">
                     <span
                       className={`px-2 py-1 rounded-full text-xs font-semibold capitalize ${
                         log.status === 'approved'
-                         ? 'bg-green-100 text-green-700'
+                          ? 'bg-green-100 text-green-700'
                           : log.status === 'rejected'
-                         ? 'bg-red-100 text-red-700'
+                          ? 'bg-red-100 text-red-700'
                           : 'bg-yellow-100 text-yellow-700'
                       }`}
                     >
@@ -281,7 +281,7 @@ const calendarData = logs.map((log: any) => ({
                       disabled={deletingId === log._id}
                       className="text-red-600 hover:text-red-700 font-medium text-sm transition-colors duration-200 disabled:opacity-50"
                     >
-                      {deletingId === log._id? '...' : 'Delete'}
+                      {deletingId === log._id ? '...' : 'Delete'}
                     </button>
                   </td>
                 </tr>
