@@ -6,9 +6,8 @@ import SupervisorDashboard from '@/components/SupervisorDashboard';
 
 export default async function Dashboard() {
   const session = await getServerSession(authOptions);
-  
   if (!session) redirect('/login');
-
+  
   if (session.user.role === 'supervisor') {
     return <SupervisorDashboard user={session.user} />;
   }

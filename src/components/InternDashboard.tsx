@@ -2,29 +2,29 @@
 import { signOut } from 'next-auth/react';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import DTRCalendar from '@/components/DTRCalendar';
 
 export default function InternDashboard({ user }: any) {
   const [status, setStatus] = useState('out');
-  const [logs, setLogs] = useState([]);
+  const [logs, setLogs] = useState<any[]>([]);
   const [totalHours, setTotalHours] = useState(0);
   const [msg, setMsg] = useState('');
   const [loading, setLoading] = useState(false);
   const [deletingId, setDeletingId] = useState('');
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
   const fetchLogs = async () => {
     try {
       const res = await axios.get('/api/logs');
       setLogs(res.data.logs);
       setTotalHours(res.data.totalHours);
-      
       const today = new Date();
-      today.setHours(0,0,0,0);
+      today.setHours(0, 0, 0, 0);
       const openLog = res.data.logs.find((log: any) => {
         const logDate = new Date(log.date);
-        logDate.setHours(0,0,0,0);
+        logDate.setHours(0, 0, 0, 0);
         return logDate.getTime() === today.getTime() &&!log.timeOut;
       });
-      
       setStatus(openLog? 'in' : 'out');
     } catch (e) {
       console.log('Failed to fetch logs', e);
@@ -77,6 +77,27 @@ export default function InternDashboard({ user }: any) {
     setDeletingId('');
   };
 
+  // Convert logs to calendar format
+const calendarData = logs.map((log: any) => ({
+  date: new Date(log.date).toISOString().split('T')[0],
+  status: log.status === 'rejected'
+   ? 'absent' as const
+    : log.isLate
+   ? 'late' as const
+    : 'present' as const,
+  timeIn: log.timeIn,
+  timeOut: log.timeOut,
+  hours: log.hours,
+}));
+
+  const selectedLog = selectedDate
+   ? logs.find((log: any) => {
+        const logDate = new Date(log.date).toISOString().split('T')[0];
+        const selected = selectedDate.toISOString().split('T')[0];
+        return logDate === selected;
+      })
+    : null;
+
   const completion = (totalHours / user.requiredHours) * 100;
 
   return (
@@ -113,11 +134,18 @@ export default function InternDashboard({ user }: any) {
           </div>
           <p className="text-xs text-gray-600 mt-2">{completion.toFixed(1)}% Complete</p>
         </div>
+
         <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200 hover:shadow-md transition-shadow duration-200">
           <p className="text-sm font-medium text-gray-500 mb-1">Current Status</p>
           <div className="flex items-center gap-3 mt-2">
-            <div className={`w-3 h-3 rounded-full animate-pulse ${status === 'in'? 'bg-green-500' : 'bg-gray-400'}`} />
-            <p className="text-3xl font-bold text-gray-900">{status === 'in'? 'Timed In' : 'Timed Out'}</p>
+            <div
+              className={`w-3 h-3 rounded-full animate-pulse ${
+                status === 'in'? 'bg-green-500' : 'bg-gray-400'
+              }`}
+            />
+            <p className="text-3xl font-bold text-gray-900">
+              {status === 'in'? 'Timed In' : 'Timed Out'}
+            </p>
           </div>
           <p className="text-sm text-gray-500 mt-2">
             {status === 'in'? 'You are currently clocked in' : 'Clock in to start tracking'}
@@ -144,6 +172,44 @@ export default function InternDashboard({ user }: any) {
         </div>
       </div>
 
+      {/* Calendar View */}
+      <div className="mb-6">
+        <DTRCalendar dtrData={calendarData} onDateClick={setSelectedDate} />
+      </div>
+
+      {/* Selected Date Details */}
+      {selectedLog && (
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
+          <h3 className="font-bold text-blue-900 mb-2">
+            Details for {new Date(selectedLog.date).toLocaleDateString()}
+          </h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+            <div>
+              <p className="text-blue-600">Time In</p>
+              <p className="font-semibold text-blue-900">
+                {new Date(selectedLog.timeIn).toLocaleTimeString()}
+              </p>
+            </div>
+            <div>
+              <p className="text-blue-600">Time Out</p>
+              <p className="font-semibold text-blue-900">
+                {selectedLog.timeOut
+                 ? new Date(selectedLog.timeOut).toLocaleTimeString()
+                  : 'Still In'}
+              </p>
+            </div>
+            <div>
+              <p className="text-blue-600">Hours</p>
+              <p className="font-semibold text-blue-900">{selectedLog.hours?.toFixed(2) || '-'}</p>
+            </div>
+            <div>
+              <p className="text-blue-600">Status</p>
+              <p className="font-semibold text-blue-900 capitalize">{selectedLog.status}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-200">
           <h2 className="text-xl font-bold text-gray-900">Recent Logs</h2>
@@ -166,28 +232,46 @@ export default function InternDashboard({ user }: any) {
                 <tr
                   key={log._id}
                   className={`transition-colors duration-200 ${
-                    log.status === 'approved'? 'bg-green-50/50' :
-                    log.status === 'rejected'? 'bg-red-50/50' :
-                    'hover:bg-gray-50'
+                    log.status === 'approved'
+                     ? 'bg-green-50/50'
+                      : log.status === 'rejected'
+                     ? 'bg-red-50/50'
+                      : 'hover:bg-gray-50'
                   }`}
                 >
-                  <td className="px-4 py-3 text-gray-900">{new Date(log.date).toLocaleDateString()}</td>
-                  <td className="px-4 py-3 text-gray-900">{new Date(log.timeIn).toLocaleTimeString()}</td>
-                  <td className="px-4 py-3 text-gray-900">{log.timeOut? new Date(log.timeOut).toLocaleTimeString() : '-'}</td>
-                  <td className="px-4 py-3 font-medium text-gray-900">{log.hours?.toFixed(2) || '-'}</td>
+                  <td className="px-4 py-3 text-gray-900">
+                    {new Date(log.date).toLocaleDateString()}
+                  </td>
+                  <td className="px-4 py-3 text-gray-900">
+                    {new Date(log.timeIn).toLocaleTimeString()}
+                  </td>
+                  <td className="px-4 py-3 text-gray-900">
+                    {log.timeOut? new Date(log.timeOut).toLocaleTimeString() : '-'}
+                  </td>
+                  <td className="px-4 py-3 font-medium text-gray-900">
+                    {log.hours?.toFixed(2) || '-'}
+                  </td>
                   <td className="px-4 py-3">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      log.isLate? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'
-                    }`}>
+                    <span
+                      className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        log.isLate
+                         ? 'bg-orange-100 text-orange-700'
+                          : 'bg-green-100 text-green-700'
+                      }`}
+                    >
                       {log.isLate? 'Late' : 'On Time'}
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    <span className={`px-2 py-1 rounded-full text-xs font-semibold capitalize ${
-                      log.status === 'approved'? 'bg-green-100 text-green-700' :
-                      log.status === 'rejected'? 'bg-red-100 text-red-700' :
-                      'bg-yellow-100 text-yellow-700'
-                    }`}>
+                    <span
+                      className={`px-2 py-1 rounded-full text-xs font-semibold capitalize ${
+                        log.status === 'approved'
+                         ? 'bg-green-100 text-green-700'
+                          : log.status === 'rejected'
+                         ? 'bg-red-100 text-red-700'
+                          : 'bg-yellow-100 text-yellow-700'
+                      }`}
+                    >
                       {log.status || 'pending'}
                     </span>
                   </td>
