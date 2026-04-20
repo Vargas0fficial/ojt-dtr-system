@@ -5,6 +5,11 @@ import DTRLog from '@/models/DTRLog';
 import User from '@/models/User';
 import { NextResponse } from 'next/server';
 
+// ITO YUNG DAGDAG KO BRO - PARA MAMATAY NA SI CACHE AT EDGE RUNTIME
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic'; 
+export const revalidate = 0;
+
 export async function POST() {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -12,17 +17,16 @@ export async function POST() {
   await dbConnect();
   const user = await User.findById(session.user.id);
 
-  // BRUTE FORCE: UTC + 8 = Manila. Period.
+  // BRUTE FORCE: UTC + 8 = Manila. Wala nang drama.
   const utcDate = new Date();
   const manilaHours = (utcDate.getUTCHours() + 8) % 24;
   const manilaMinutes = utcDate.getUTCMinutes();
   const manilaSeconds = utcDate.getUTCSeconds();
   
-  // Para sa date grouping
-  const utcDateOnly = new Date(utcDate);
-  utcDateOnly.setUTCHours(0, 0, 0, 0);
-  const manilaDateOnly = new Date(utcDateOnly);
-  manilaDateOnly.setUTCHours(manilaDateOnly.getUTCHours() + 8);
+  // Para sa date grouping na naka-Manila na
+  const todayManila = new Date();
+  todayManila.setUTCHours(manilaHours, manilaMinutes, manilaSeconds, 0);
+  todayManila.setUTCHours(0, 0, 0, 0); // Set sa 12:00 AM Manila
 
   // Gawa tayo ng timeIn na naka-offset na
   const phTime = new Date();
@@ -30,7 +34,7 @@ export async function POST() {
 
   const existing = await DTRLog.findOne({ 
     intern: user._id, 
-    date: manilaDateOnly, 
+    date: todayManila, 
     timeOut: null 
   });
   
@@ -39,13 +43,13 @@ export async function POST() {
   // 8:30 AM cutoff gamit yung brute force hours
   const isLate = manilaHours > 8 || (manilaHours === 8 && manilaMinutes >= 31);
 
-  // DEBUG: Para makita natin sa Vercel logs
+  // DEBUG: Check mo to sa Vercel Logs after mo mag time-in
   console.log('UTC Hour:', utcDate.getUTCHours(), 'Manila Hour:', manilaHours, 'isLate:', isLate);
 
   await DTRLog.create({
     intern: user._id,
     timeIn: phTime,
-    date: manilaDateOnly,
+    date: todayManila,
     isLate
   });
 
