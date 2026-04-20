@@ -4,14 +4,8 @@ import dbConnect from '@/lib/mongodb';
 import DTRLog from '@/models/DTRLog';
 import User from '@/models/User';
 import { NextResponse } from 'next/server';
-import dayjs from 'dayjs';
-import utc from 'dayjs/plugin/utc';
-import timezone from 'dayjs/plugin/timezone';
 
-dayjs.extend(utc);
-dayjs.extend(timezone);
-// ETO YUNG FIX: Force Manila timezone para sa lahat ng dayjs()
-dayjs.tz.setDefault("Asia/Manila");
+// Tanggal na si dayjs. Native JS tayo.
 
 export async function POST() {
   const session = await getServerSession(authOptions);
@@ -20,9 +14,14 @@ export async function POST() {
   await dbConnect();
   const user = await User.findById(session.user.id);
 
-  // Ngayon automatic Manila na lahat ng dayjs() call
-  const phTime = dayjs().toDate(); 
-  const today = dayjs().startOf('day').toDate(); 
+  // KUHA MANILA TIME GAMIT NATIVE JS - SUREBALL TO
+  const now = new Date();
+  const phTimeString = now.toLocaleString("en-US", { timeZone: "Asia/Manila" });
+  const phTime = new Date(phTimeString); // Eto na yung actual Manila time
+  
+  // 12:00 AM Manila time para sa date grouping
+  const today = new Date(phTime);
+  today.setHours(0, 0, 0, 0);
 
   const existing = await DTRLog.findOne({ 
     intern: user._id, 
@@ -32,10 +31,11 @@ export async function POST() {
   
   if (existing) return NextResponse.json({ error: 'Already timed in' }, { status: 400 });
 
-  // 8:30 AM PH cutoff. 8:30 sakto = on time pa
-  const currentHour = dayjs().hour();
-  const currentMinute = dayjs().minute();
-  const isLate = currentHour > 8 || (currentHour === 8 && currentMinute >= 31);
+  const hours = phTime.getHours(); // 0-23 format
+  const minutes = phTime.getMinutes();
+  
+  // 8:30 AM cutoff. 8:30 = on time pa, 8:31 = late na
+  const isLate = hours > 8 || (hours === 8 && minutes >= 31);
 
   await DTRLog.create({
     intern: user._id,
@@ -44,9 +44,17 @@ export async function POST() {
     isLate
   });
 
+  // Format para sa response
+  const timeInFormatted = phTime.toLocaleTimeString("en-US", { 
+    hour: '2-digit', 
+    minute: '2-digit',
+    hour12: true,
+    timeZone: "Asia/Manila" 
+  });
+
   return NextResponse.json({ 
     msg: 'Timed in', 
     isLate, 
-    timeIn: dayjs().format('hh:mm A') 
+    timeIn: timeInFormatted 
   });
 }
